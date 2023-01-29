@@ -1,0 +1,145 @@
+<input type="file" id="img_input" name="img" accept="image/*">
+<img id="image" >
+<button id="code_button">Codieren</button>
+<label id="output_label"></label>
+
+<script>
+    var canvas;
+    var input;
+    var actPos = {x:0, y:0}
+    var lastAVG;
+    var counter = 0;
+
+    img_input.onchange = evt => {
+        const [file] = img_input.files
+        if (file) {
+            image.src = URL.createObjectURL(file)
+        }
+    }
+
+    document.getElementById("code_button").addEventListener("click", function() {
+
+        input = document.getElementById("image");
+        
+        var w = input.width, h = input.height;
+
+        canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvasWidth = w;
+        canvas.height = h;
+        console.log(canvas.height);
+
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(input, 0, 0);
+        var dataArr = ctx.getImageData(0, 0, w, h).data;
+
+        actPos = {x:0, y:0}
+        lastAVG = null;
+        counter = 0;
+        console.log(dataArr)
+        console.log(getCodedData(dataArr));
+    });
+    var allSteps = 0;
+    function getCodedData(arr) {
+        var result = [];
+
+        iterate(actPos.x, actPos.y, result, arr);
+       
+        while(actPos.x != canvas.width - 1  || actPos.y != canvas.height - 1) {
+            // Sets the new Position
+            if(actPos.x == canvas.width - 1)
+                actPos.y += 1
+            else if (actPos.y == canvas.height - 1)
+                actPos.x += 1
+            else if(actPos.y == 0)
+                actPos.x += 1;
+            else if(actPos.x == 0)
+                actPos.y += 1;
+             
+            iterate(actPos.x, actPos.y, result, arr);
+        }
+
+        return result;
+    }
+
+    // Iterates thru elements depended by the start X,Y
+    function iterate(startX, startY, result, arr) {
+        
+        var step = 1;
+        var avg;
+        var allSteps = 0;
+         // Sets lastAvg to he firstAvg  
+        if(lastAVG == null)
+            lastAVG = getDataAt(startX, startY, arr);
+        
+            // handle the last index  
+        if(startX == canvas.width - 1  && startY == canvas.height - 1) {
+            avg =  getDataAt(startX, startY, arr)
+
+            if(lastAVG == avg) {
+                counter++;
+                result.push("" + counter + ": " + lastAVG + ";")
+            }
+            else {
+                result.push("" + counter + ": " + lastAVG + ";")
+                result.push("" + 1 + ": " + avg + ";")
+            }
+            return;
+        }
+        
+        // handle first index  
+        if(startX == 0 && startY == 0) {
+            avg = getDataAt(startX, startY, arr);
+            checkAVG(avg, result);
+            return;
+        }
+       
+        // Sets the direction 
+        if(startX > startY)
+            step *= -1;
+        
+    
+        checkAVG(getDataAt(actPos.x, actPos.y, arr), result);
+
+        //Hotfix because the SECOND last element never has been reached in upright pictures :D
+        if(canvas.height > canvas.width && canvas.height - 2 == actPos.y && canvas.width - 1 == actPos.x)
+            checkAVG(getDataAt(actPos.x - 1, actPos.y + 1, arr), result);
+
+        nextXPos = actPos.x + step;
+        nextYPos = actPos.y + step *-1;
+
+        
+        console.log("NEXT POS " + nextXPos, nextYPos + "AND THE STEP" + step);
+        // Iterating until it reaches the end
+        while(nextXPos > -1 && nextXPos < canvas.width && nextYPos > -1 && nextYPos < canvas.height) {
+            
+            checkAVG(getDataAt(nextXPos, nextYPos, arr), result);
+            
+            actPos.x = nextXPos;
+            actPos.y = nextYPos;
+
+            nextXPos += step;
+            nextYPos += step *-1;
+        }
+        console.log("End of Iterating");
+        
+    }
+    
+    function checkAVG(avg, result){
+        if(avg != lastAVG) {
+            result.push("" + counter + ": " + lastAVG + ";");
+            lastAVG = avg;
+            counter = 1;
+        }else {
+            counter++;
+        }
+    }
+
+    function getDataAt(x, y, arr) {
+        console.log(x,y);
+        let index = (x + y * (canvas.width)) * 4;
+        
+        return Math.round((arr[index] + arr[index + 1] + arr[index + 2]) / 3);
+    }
+    
+</script>

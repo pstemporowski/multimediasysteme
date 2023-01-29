@@ -1,0 +1,131 @@
+<html>
+    <head>
+
+    </head>
+    <body>
+        <h3>Hinweise zum Input:</h3>
+        <a>einzelne Elemente in einer Reihe werden mit ',' getrennt</a>
+        <br>
+        <a>Neue Column wird durch ein Zeilenumbruch erstellt
+        </a>
+        <p>Beispiel wie man es eingibt:</p>
+        <p>
+            139,144,149,153,155,155,155,155<br>
+            144,151,153,156,159,156,156,156<br>
+            150,155,160,163,158,156,156,156<br>
+            159,161,162,160,160,159,159,159<br>
+            159,160,161,162,162,155,155,155<br>
+            161,161,161,161,160,157,157,157<br>
+            162,162,161,163,162,157,157,157<br>
+            162,162,161,161,163,158,158,158<br></p>
+        <textarea style="width: 300px; height: 300px" id="input_matrix"></textarea> <button id="button_dct">dct</button>
+        <table id="table">
+            	
+        </table>
+    </body>
+</html>
+
+<style>
+    table, th, td {
+    border: 1px solid black;
+}
+</style>
+
+<script>
+    button_dct = document.getElementById('button_dct');
+    button_dct.addEventListener("click", encrypt);
+    var matrix;
+
+    function encrypt() {
+        let localMatrix = document.getElementById('input_matrix').value;
+        localMatrix = localMatrix.split('\n');
+        outputMatrix = [];
+        //console.log(matrix[0]);
+        for (var i = 0; i < localMatrix.length; i++) {
+            outputMatrix.push(localMatrix[i].split(','));
+        }
+            
+        matrix = outputMatrix;
+        print(compute());
+        
+    }
+    
+    /*let matrix =  [ [ 139,144,149,153,155,155,155,155 ],
+                [144,151,153,156,159,156,156,156 ],
+                [ 150,155,160,163,158,156,156,156 ],
+                [ 159,161,162,160,160,159,159,159 ],
+                [ 159,160,161,162,162,155,155,155],
+                [ 161,161,161,161,160,157,157,157 ],
+                [162,162,161,163,162,157,157,157 ],
+                [162,162,161,161,163,158,158,158] ];
+
+    
+    let matrix =  [ [ 197,208,226,198,209,227,197,210 ],
+                [197,208,226,198,209,227,197,208 ],
+                [197,209,225,199,207,226,200,208 ],
+                [197,208,226,198,209,227,197,208 ],
+                [196,209,225,199,207,226,199,208],
+                [197,209,225,197,208,226,197,209 ],
+                [196,209,225,197,208,226,197,209 ],
+                [197,209,225,197,208,226,197,209] ];
+    */            
+    
+
+    function compute() {
+        
+        let dctMatrix = new Array();
+        for (i = 0; i < 8; i++)
+            dctMatrix.push(new Array(8));
+
+        for(var i = 0; i < 8; i++) 
+            for(var j = 0; j < 8; j++)
+                dctMatrix[i][j] = dct(i, j);
+
+        return dctMatrix;
+    };
+
+    function dct(u,v) { 
+        
+        let result = 0;
+        let C = (1/4) * getC(u) * getC(v);
+
+        for(var j = 0; j < 8; j++) 
+            for(var k = 0; k < 8; k++) 
+                result = result + C * matrix[j][k] * cos(u, j) * cos(v, k)
+           
+
+        return Math.round(result);
+    }
+
+    function getC(val) {
+        if(val == 0 )
+            return 1/Math.sqrt(2);
+
+        return 1;
+    }
+
+    function cos(a, b) {
+        return Math.cos(((2*b + 1) * a * Math.PI) / 16);
+    }
+
+    function print(matrix) {
+        var table = document.getElementById('table');
+        
+        var tableBody = document.createElement('tbody');
+
+            matrix.forEach(function(rowData) {
+            var row = document.createElement('tr');
+
+            rowData.forEach(function(cellData) {
+                var cell = document.createElement('td');
+                cell.appendChild(document.createTextNode(cellData));
+                row.appendChild(cell);
+            });
+
+            tableBody.appendChild(row);
+            });
+
+        table.appendChild(tableBody);
+        document.body.appendChild(table);
+    }
+</script>

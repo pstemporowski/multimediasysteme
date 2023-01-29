@@ -1,0 +1,124 @@
+<input placeholder="Text" id="message_input">
+<input placeholder="key" type="number" id="key_input">
+<button id="decrypt_button">Decrypt</button>
+<br>
+<label id="key_label" ></label>
+<br>
+<label id="output_label" ></label>
+<script>
+    var message_input = document.getElementById("message_input");
+    var key_input = document.getElementById("key_input");
+    var output_label = document.getElementById("output_label");
+    var key_label = document.getElementById("key_label");
+
+    document.getElementById("decrypt_button").addEventListener("click", function() {
+
+        var message = message_input.value;
+        message = message.toLowerCase();
+        var key = key_input.value;
+
+        if(key == null || key == '')
+            key = getKeyByMessage(message);
+        printKey(key);
+        output_label.innerHTML = "Output: <br>" + decrypt(message, key);
+        
+    });
+
+    function getKeyByMessage(message) {
+
+        let modifedMessage = message.trim();
+
+        let maxChar = getMaxCharInMessage(modifedMessage);
+        console.log("MaxChar: " + maxChar);
+        if(maxChar == '')
+            return 0;
+
+        return maxChar.charCodeAt(0) - 101; 
+    };
+
+    function getMaxCharInMessage(message) {
+        console.log(message);
+        let maxValue = 0;
+        let maxChar = '';
+
+        message.split('').forEach(function(char) {
+            charCode = char.charCodeAt(0);
+
+            if(charCode > 96 && charCode < 123) {
+
+                if(message.split(char).length > maxValue) {
+
+                    maxValue = message.split(char).length;
+                    maxChar = char;
+                }
+            } 
+        });
+
+        if(maxChar == ' ')
+            maxChar = '';
+
+        return maxChar;
+    }
+
+    function decrypt(message, key) {
+        let result = "";
+        var decryptedChar;
+        const zValue = 122;
+        const aValue = 97;
+        if(key == null)
+            return;
+       
+        for(var i = 0; i < message.length; i++) {
+            
+            var charCode = message.charCodeAt(i);
+            
+            if(isLetter(charCode)) {
+                decryptedChar = charCode - key;
+
+                
+                if(decryptedChar < aValue)
+                        decryptedChar = 123 - (key -(charCode - aValue));
+ 
+                if(decryptedChar > zValue)
+                        decryptedChar = 96 + (Math.abs(key) - (zValue - charCode));
+          
+
+                result = result + String.fromCharCode(decryptedChar);
+            }else result = result + String.fromCharCode(charCode);
+            
+        }
+            
+        function isLetter(code) {
+            if(code > 96 && code < 123)
+                return true;
+            else return false;
+        }
+
+        /*
+        message.split('').forEach(char => {
+            
+            if(char > 96 && char < 123 || char > 64 && char < 91) {
+                decryptedChar = char - key;
+
+                if( decryptedChar < 65 || decryptedChar < 97 && decryptedChar > 90 ) {
+                    decryptedChar = zvalue - (key - (char - aValue)); 
+                }
+                
+                result = result + decryptedChar;
+            }else 
+                result = result + char;
+           
+        });
+        */
+        return result;
+    }
+
+    
+    function printKey(key) {
+            if(key >= 0)
+                key_label.innerHTML ="Key: " + key;
+            else
+                key_label.innerHTML = "Key: " + "Right Shift of" + Math.abs(key)
+        }
+
+</script>

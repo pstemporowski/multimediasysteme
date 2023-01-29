@@ -1,0 +1,80 @@
+<canvas id="canvas_element" width="1000" height="500">
+</canvas>
+<label>Frames per Second:</label><label id="fps_label">60</label>
+ <input id="slider" type="range" min="1" max="144" value="60">
+<script>
+
+  
+  var canvas = document.getElementById('canvas_element');
+  var slider = document.getElementById('slider');
+  var fps = slider.value;
+  var context = canvas.getContext('2d');
+  var ball = {x:0 + 15, y:250, radius: 15};
+  var pi = Math.pi;
+  var right = true;
+  var left = false;
+  var step = 200;
+
+    
+  draw(); 
+
+  slider.oninput = function() {
+    fps = slider.value;
+    fps_label.innerHTML = this.value;
+  }
+
+
+  function  draw() {
+
+    context.fillStyle = '#EEEEEE';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    
+    context.strokeStyle = '#000000'; 
+    context.strokeRect(1,  1, canvas.width-2, canvas.height-2);
+    var stepProFrame = step / fps;
+    if(right) {
+      if(ball.x + ball.radius + stepProFrame >= canvas.width){
+        //Anzahl schon gelaufener Schritter - die Ländge 
+        ball.x = canvas.width - (stepProFrame - (canvas.width - ball.x - ball.radius));
+
+        switchDirection();
+      }else {
+        ball.x = ball.x + stepProFrame;
+      }
+     
+    } else {
+      if(ball.x - ball.radius - stepProFrame <= 0) {
+        var firstStep = stepProFrame - ball.x + ball.radius;
+        ball.x = firstStep;
+        switchDirection();
+      }else {
+        ball.x = ball.x - stepProFrame;
+      }
+    }
+      // Kreis init
+    context.fillStyle = "#000000";
+    context.beginPath();
+    context.arc(ball.x,ball.y,15,0,Math.PI*2,true);
+    context.closePath();
+    context.fill();    
+  }
+
+  // ändert die Direction der Kugel
+  function switchDirection() {
+    if(left) {
+      left = false;
+      right = true;
+    }else {
+      left = true;
+      right = false;
+    }
+  }
+
+
+  function loop() {
+    window.setTimeout(loop, 1000/fps);
+    draw();
+  };
+
+  loop();
+</script>

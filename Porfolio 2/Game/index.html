@@ -1,0 +1,423 @@
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nerko+One&family=Rubik+Distressed&display=swap" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+</head>
+<body>
+
+
+<canvas id="canvas_element" width="600" height="600">
+    <a style="font-family: 'Rubik Distressed', cursive;">Game Over</a>
+</canvas>
+
+<audio loop autoplay>
+    <source src="Music/action.mp3" type="audio/mpeg">
+    <a href="Music/action.mp3">test.mp3</a>
+</audio>
+<button id="button_restart">Neustart</button>
+<button id="button_stop">Stoppen</button>
+<button id="button_startMusic">Musik START/PAUSE</button>
+<button onclick="changeBackground()"> Hintergrund ändern</button>
+<br>
+<p>Spiel Anleitung:</p>
+<p>PFEILTASTEN: Bewegen</p>
+<p>SPACE: Level-Neustart</p>
+<p>Weiche den schwarzen Punkten aus!</p>
+<p>Einen Punkt kriegst du pro fertiges Level. Die einzelnen Level starten automatisch.</p>
+<p>Gelbe Punkte geben dir ein Extra leben. Spawnen aber alle 4 Runden</p>
+
+<script>
+    //https://freesound.org/search/?q=562604
+    const audioBackgroud = new Audio('Music/action.mp3');
+    audioBackgroud.muted = true;
+    audioBackgroud.autoplay = true;
+
+    //https://freesound.org/people/rdaly95/sounds/387134/
+    const audioCollect = new Audio('Music/collecting.wav');
+
+    const audioDamage = new Audio("Music/damage.wav")
+    
+    var f = new FontFace('Rubik', 'url(Fonts/RubikDistressed-Regular.ttf)');
+    f.load().then(function(font) {
+        console.log('font ready');
+        document.fonts.add(font);
+    });
+    
+    const canvas = document.getElementById('canvas_element');
+    const a_lifes = document.getElementById('a_lifes');
+    const context = canvas.getContext('2d');
+    const button_restart = document.getElementById('button_restart');
+    const button_stop = document.getElementById('button_stop');
+    const button_startMusic = document.getElementById("button_startMusic");
+
+    const User = {x:300, y:300, radius: 15, colorHex: "green", lifes:2};
+    const HealSize = 15;
+    
+    var musicStarted = false;
+    var alive = true;
+    var right, left, up, down;
+    var Enemies = [];
+    var Heal = [];
+    var fps = 120;
+    var score = 0;
+    var timerInSeconds = 0;
+    var loopCount = 0;
+    var highScore = 0;
+    
+    var enemyDelayMultiplikator = 13;
+    var enemyColor = "black";
+    var fontColor = "white";
+    var healColor = "gold"
+    var step = 5;
+    var timeoutId;
+    var pi = Math.pi;
+    var level = 1;
+    var backgroundIndex = 0;
+    
+    var BackgroundImgWater = new Image();
+    BackgroundImgWater.src = "https://cdn.pixabay.com/photo/2016/04/12/22/35/watercolour-1325656_960_720.jpg";
+    var BackgroundImg = BackgroundImgWater;
+    var BackgroundImgColors = new Image();
+    BackgroundImgColors.src = "https://cdn.pixabay.com/photo/2016/08/13/17/59/background-1591229_960_720.jpg"; 
+    var multiplikator = 1;
+    var healImg = new Image();
+    //healImg.src = 'https://cdn-icons-png.flaticon.com/512/123/123261.png';
+
+    initEnemies(level);
+    
+    button_restart.addEventListener("click", () => {
+        console.log("restarting");
+        
+        restartGame();
+    });
+
+    button_startMusic.addEventListener("click", () => {
+        console.log("im in");
+
+        if(audioBackgroud.muted) {
+            audioBackgroud.play();
+            audioBackgroud.muted = false;
+        }else {
+            audioBackgroud.muted = true;
+            audioBackgroud.pause;
+        }
+            
+    });
+
+    button_stop.addEventListener("click", () => {
+        console.log("stopped");
+        stopGame();
+    });
+
+    function restartGame() {
+        if(!musicStarted) {
+            audioBackgroud.play();
+            audioBackgroud.muted = false;
+            musicStarted = true;
+        }
+            
+        clearTimeout(timeoutId);
+        
+        alive = true;
+        level = 1;
+        step = 5;
+        multiplikator = 1;
+        Heal=[];
+        User.x = 250;
+        User.y = 250;
+        score = 0;
+        setLifes(2)
+        initEnemies(level);
+        loop();
+      
+    }
+
+    function stopGame() {
+        clearTimeout(timeoutId);
+    }
+
+    function changeBackground() {
+
+        if(backgroundIndex == 0) {
+            BackgroundImg = BackgroundImgColors;
+            backgroundIndex = 1;
+        }else {
+            BackgroundImg = BackgroundImgWater;
+            backgroundIndex = 0;
+        }
+    };
+
+    window.addEventListener("keydown", (ev) => {
+        if(ev.keyCode === 38) {
+            up = true;
+        }else if(ev.keyCode === 39) {
+            right = true;
+        }else if(ev.keyCode === 40) {
+            down = true;
+        }else if(ev.keyCode === 37) {
+            left = true;
+        }
+    });
+    window.addEventListener("keyup", (ev) => {
+        if(ev.keyCode === 38) {
+            up = false;
+        }else if(ev.keyCode === 39) {
+            right = false;
+        }else if(ev.keyCode === 40) {
+            down = false;
+        }else if(ev.keyCode === 37) {
+            left = false;
+        }else if(ev.keyCode === 32)
+            restartGame();
+    });
+  
+    var firstStart = true;
+    function loop() {
+        context.textAlign = 'center';
+        loopCount++;
+        timerInSeconds = Math.round(loopCount / 120);
+        context.fillStyle = '#EEEEEE';
+
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(BackgroundImg,0, 0,canvas.width, canvas.height);
+
+        if(firstStart) {
+            alive = false;
+            firstStart = false;
+        }
+        if(alive) {
+            context.font = "30px Nerko One";
+            context.strokeText("lifes:" + Math.floor(User.lifes), canvas.width/2, 50);
+            context.strokeText("score:" + score, canvas.width/2, 90);
+            context.strokeText("Sekunden:" + timerInSeconds, 90, canvas.height - 30);
+
+            updateUser();
+            updateEnemies();
+            drawHeal();
+            drawEnemies(Enemies);
+            drawObject(User);
+            checkAllCol();
+            
+            timeoutId = window.setTimeout(loop, 1000/fps);
+        }
+        else {
+            context.fontColor = fontColor;
+            context.font = "60px Rubik"
+            
+            context.strokeText("Game Over", canvas.width/2, 80);
+
+            if(score > highScore)
+                highScore = score;
+
+            context.font = "60px Nerko One"
+            context.strokeText("Highscore:" + highScore, canvas.width/2, 200);
+            context.font = "30px Nerko One"
+            context.strokeText("Score:" + score, canvas.width/2, 230);
+            context.strokeText("Überlebte Sekunden:" + timerInSeconds, canvas.width/2, 400);
+            stopped = true;
+            return;
+        }
+        
+
+       
+    };
+
+    function updateEnemies() {
+        let allFinished = true;
+        Enemies.forEach(enemy => {
+            if(!enemy.finished) {
+                allFinished = false;
+
+                if(enemy.delay > 0) {
+                    enemy.delay--;
+                    return;
+                }
+
+                enemy.x = enemy.x + enemy.stepX;
+                enemy.y = enemy.y + enemy.stepY; 
+
+                if(enemy.x < 0 - enemy.radius - 1 || enemy.x > canvas.width + enemy.radius + 1 || enemy.y > canvas.height + enemy.radius + 1  || enemy.y < 0 - enemy.radius )
+                    enemy.finished = true;
+            }
+        });
+
+        if(allFinished)
+            levelFinished();
+        
+    };
+
+    function levelFinished() {
+        console.log("finished");
+        score++;
+        level++;
+
+        if(level % 4 == 0)
+            spawnHeal();
+
+        initEnemies(level);
+    }
+
+    function spawnHeal() {
+        console.log("spawning heal")
+        var heal = {
+            radius: HealSize,
+            colorHex: healColor,
+            x: Math.random() * canvas.width - HealSize,
+            y: Math.random() * canvas.height - HealSize
+        }
+        Heal.push(heal);
+        
+    }
+
+    function drawHeal() {
+        Heal.forEach(heal => {
+            drawObject(heal);
+        });
+    }
+    function updateUser() {
+        if(right && User.x + User.radius + step< canvas.height)
+            User.x += step;
+        if(up && User.y - User.radius - step > 0)
+            User.y -= step;
+        if(down && User.y + User.radius + step < canvas.width)
+            User.y += step;
+        if(left && User.x - User.radius - step > 0)
+            User.x -= step;
+        
+    }
+
+    function drawEnemies() {
+        Enemies.forEach(element => {
+            drawObject(element);
+        });
+    }
+
+    function drawObject(obj) {
+
+        context.fillStyle = obj.colorHex;
+        context.beginPath();
+        context.arc(obj.x,obj.y,obj.radius,0,Math.PI*2,true);
+        context.closePath();
+        context.fill();  
+    }
+    
+    function initEnemies(level) {
+        var count = level * 2;
+        console.log("initing Enemies");
+        Enemies = [];
+        for(var i = 0; i < count; i++) {
+            var position = Math.floor(Math.random() * 4);
+            
+            var enemyX = 0;
+            var enemyY = 0;
+            var enemyStepX = 0;
+            var enemyStepY = 0;
+            
+            switch(position) {
+                case 0:
+                    enemyStepX = step * multiplikator;
+                    enemyX = -15;
+                    enemyY = Math.random() * canvas.height;
+                    break;
+                case 1:
+                    enemyStepY = step * multiplikator;
+                    enemyX =  Math.random() * canvas.width;
+                    enemyY = -15;
+                    break;
+                case 2:
+                    enemyStepX = step * multiplikator * -1;
+                    enemyX = canvas.width + 15; 
+                    enemyY =  Math.random() * canvas.height;
+                    break;
+                case 3:
+                    enemyStepY = step * multiplikator * -1;
+                    enemyX =  Math.random() * canvas.width;
+                    enemyY = canvas.height + 15;
+                    break;
+            }
+            console.log(enemyStepX);
+            var enemy = { x:enemyX, y:enemyY, radius: 15, colorHex: enemyColor, stepX: enemyStepX, stepY: enemyStepY, delay: Math.floor(Math.random() * enemyDelayMultiplikator * level), finished: false};
+            Enemies.push(enemy);
+        }
+    }
+
+    var isColliding = false;
+    var changed = false;
+    function checkAllCol() {
+        var colliding = false;
+        Enemies.forEach(element => {
+            if(checkCol(User, element))
+                colliding = true;
+        });
+        var collidingHealElement = null;
+        Heal.forEach(element => {
+            if(checkCol(User, element)) {
+                audioCollect.play();
+                User.lifes++;
+                collidingHealElement = element;
+                return;
+            }    
+
+        });
+
+        if(collidingHealElement != null) {
+            var index = Heal.indexOf(collidingHealElement);
+
+            if (index > -1) {
+                Heal.splice(index, 1); 
+            }
+        }
+        
+        //var beforeColorHex = User.colorHex;
+        if(isColliding == colliding) {
+            changed = false;
+            return;
+        }
+        else {
+            changed = true;
+            audioDamage.play();
+            takeDamage(1);
+            User.colorHex = colliding ? "red" : "green"
+            isColliding = colliding;
+            
+        }
+        
+    };
+
+    function checkCol(obj1, obj2){
+      
+        var dx = obj1.x - obj2.x;
+        var dy = obj1.y - obj2.y;
+        var distance = Math.sqrt(dx * dx + dy * dy);
+
+        if(distance < obj1.radius + obj2.radius)
+            return true;
+        else 
+            return false; 
+    }
+
+    function setLifes(num) {
+        
+        if(num < 0)
+            alive = false;
+        else
+            User.lifes = num;
+    }
+
+
+
+    function takeDamage(damage) {
+        if(User.lifes - damage >= 0) 
+            User.lifes = User.lifes - damage / 2;
+        else alive = false;
+       
+    }
+
+    window.addEventListener('load', function () {
+        loop();
+    })
+    
+</script>
+
+</body>
